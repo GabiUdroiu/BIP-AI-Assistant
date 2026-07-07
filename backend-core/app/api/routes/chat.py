@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from app.api.deps import get_chat_provider, get_conversation_service, get_prompt_service, get_rag_service
 from app.models.api_response import ApiResponse
+from app.services.chat_providers.base import ChatProviderError
 from app.services.conversation_service import ConversationService
 from app.services.prompt_service import PromptService
 from app.services.rag_service import RagService
@@ -39,7 +40,10 @@ def chat(
     history = conversation_service.get_history(request.session_id)
 
     messages = [{"role": "system", "content": system_prompt}, *history, {"role": "user", "content": request.message}]
-    reply = chat_provider.reply(messages)
+    try:
+        reply = chat_provider.reply(messages)
+    except ChatProviderError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     conversation_service.save_message(request.session_id, "user", request.message)
     conversation_service.save_message(request.session_id, "assistant", reply)

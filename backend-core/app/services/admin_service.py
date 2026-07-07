@@ -1,4 +1,4 @@
-from sqlalchemy import MetaData, Table, delete, insert, select
+from sqlalchemy import MetaData, Table, delete, insert, select, update
 from sqlalchemy.engine import Engine
 
 
@@ -49,6 +49,15 @@ class AdminService:
         table = self._get_table(table_name)
         with self._engine.begin() as conn:
             result = conn.execute(insert(table).values(**data).returning(table))
+            row = result.fetchone()
+            return dict(row._mapping) if row else {}
+
+    def update_row(self, table_name: str, pk_column: str, pk_value: str, data: dict) -> dict:
+        table = self._get_table(table_name)
+        with self._engine.begin() as conn:
+            result = conn.execute(
+                update(table).where(table.c[pk_column] == pk_value).values(**data).returning(table)
+            )
             row = result.fetchone()
             return dict(row._mapping) if row else {}
 

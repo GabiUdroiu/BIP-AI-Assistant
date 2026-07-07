@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import { BackendService } from './backend.service';
 
@@ -6,12 +6,12 @@ const RECORDING_DURATION_MS = 5000;
 
 @Injectable({ providedIn: 'root' })
 export class AudioService {
+  private readonly backendService = inject(BackendService);
+
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private isRecording = false;
   private mimeType = 'audio/webm';
-
-  constructor(private backendService: BackendService) {}
 
   startSpeechRecognition(): Observable<string> {
     return new Observable(observer => {

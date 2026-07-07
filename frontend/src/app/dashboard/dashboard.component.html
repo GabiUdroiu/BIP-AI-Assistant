@@ -1,57 +1,83 @@
 <div class="dashboard">
   <aside class="sidebar">
     <h2>Tables</h2>
-    <button
-      *ngFor="let table of tables()"
-      class="table-btn"
-      [class.active]="table === selectedTable()"
-      (click)="selectTable(table)"
-    >
-      {{ table }}
-    </button>
+    @for (table of tables(); track table) {
+      <button class="table-btn" [class.active]="table === selectedTable()" (click)="selectTable(table)">
+        {{ table }}
+      </button>
+    }
   </aside>
 
   <main class="content">
-    <div class="error" *ngIf="errorMessage()">{{ errorMessage() }}</div>
+    @if (errorMessage()) {
+      <div class="error">{{ errorMessage() }}</div>
+    }
 
-    <div *ngIf="!selectedTable()" class="empty">Select a table to view and insert data.</div>
+    @if (!selectedTable()) {
+      <div class="empty">Select a table to view and insert data.</div>
+    }
 
-    <div *ngIf="selectedTable()">
-      <h2>{{ selectedTable() }}</h2>
+    @if (selectedTable()) {
+      <div>
+        <h2>{{ selectedTable() }}</h2>
 
-      <form class="insert-form" (ngSubmit)="submit()">
-        <div class="field" *ngFor="let col of columns()">
-          <label>
-            {{ col.name }}
-            <span class="type">{{ col.type }}</span>
-            <span class="pk" *ngIf="col.primary_key">PK</span>
-          </label>
-          <input
-            type="text"
-            [ngModel]="formData()[col.name] || ''"
-            (ngModelChange)="updateField(col.name, $event)"
-            name="{{ col.name }}"
-          />
-        </div>
-        <button type="submit" class="btn-insert">Insert Row</button>
-      </form>
+        <form class="insert-form" (ngSubmit)="submit()">
+          @for (col of columns(); track col.name) {
+            <div class="field">
+              <label>
+                {{ col.name }}
+                <span class="type">{{ col.type }}</span>
+                @if (col.primary_key) {
+                  <span class="pk">PK</span>
+                }
+              </label>
+              <input
+                type="text"
+                [ngModel]="formData()[col.name] || ''"
+                (ngModelChange)="updateField(col.name, $event)"
+                [disabled]="editingPkValue() !== null && col.primary_key"
+                name="{{ col.name }}"
+              />
+            </div>
+          }
+          <button type="submit" class="btn-insert">{{ editingPkValue() !== null ? 'Save Changes' : 'Insert Row' }}</button>
+          @if (editingPkValue() !== null) {
+            <button type="button" class="btn-cancel" (click)="cancelEdit()">Cancel</button>
+          }
+        </form>
 
-      <table class="rows-table" *ngIf="rows().length > 0">
-        <thead>
-          <tr>
-            <th *ngFor="let key of rowColumns(rows()[0])">{{ key }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of rows()">
-            <td *ngFor="let key of rowColumns(row)">{{ row[key] }}</td>
-            <td><button class="btn-delete" (click)="deleteRow(row)">Delete</button></td>
-          </tr>
-        </tbody>
-      </table>
+        @if (rows().length > 0) {
+          <div class="table-scroll">
+            <table class="rows-table">
+              <thead>
+                <tr>
+                  @for (key of rowColumns(rows()[0]); track key) {
+                    <th>{{ key }}</th>
+                  }
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of rows(); track (pkColumn() ? row[pkColumn()!] : $index)) {
+                  <tr>
+                    @for (key of rowColumns(row); track key) {
+                      <td><div class="cell">{{ row[key] }}</div></td>
+                    }
+                    <td class="row-actions">
+                      <button class="btn-edit" (click)="startEdit(row)">Edit</button>
+                      <button class="btn-delete" (click)="deleteRow(row)">Delete</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
 
-      <div class="empty" *ngIf="rows().length === 0">No rows yet.</div>
-    </div>
+        @if (rows().length === 0) {
+          <div class="empty">No rows yet.</div>
+        }
+      </div>
+    }
   </main>
 </div>

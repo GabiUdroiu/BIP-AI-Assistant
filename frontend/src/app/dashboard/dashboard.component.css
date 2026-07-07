@@ -141,13 +141,38 @@
   background: #27272a;
 }
 
-.rows-table {
-  width: 100%;
-  border-collapse: collapse;
+.field input:disabled {
+  background: #f4f4f5;
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: #52525b;
+  border: 1px solid #e4e4e7;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  height: fit-content;
+}
+
+.btn-cancel:hover {
+  background: #f4f4f5;
+}
+
+.table-scroll {
+  overflow-x: auto;
   background: #ffffff;
   border: 1px solid #e4e4e7;
   border-radius: 12px;
-  overflow: hidden;
+}
+
+.rows-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 12px;
 }
 
@@ -157,9 +182,6 @@
   padding: 10px 12px;
   border-bottom: 1px solid #e4e4e7;
   white-space: nowrap;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: #18181b;
   font-size: 14px;
 }
@@ -168,6 +190,41 @@
   background: #fafafa;
   color: #71717a;
   font-weight: 500;
+}
+
+.rows-table td .cell {
+  max-width: 260px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+
+.rows-table td .cell::-webkit-scrollbar {
+  height: 6px;
+}
+
+.rows-table td .cell::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-edit {
+  background: transparent;
+  border: 1px solid #e4e4e7;
+  color: #52525b;
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-edit:hover {
+  background: #f4f4f5;
 }
 
 .btn-delete {

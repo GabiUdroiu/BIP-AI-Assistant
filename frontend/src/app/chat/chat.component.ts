@@ -1,5 +1,4 @@
-import { Component, ViewChild, ElementRef, NgZone } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, NgZone, ViewChild, inject, signal } from '@angular/core';
 import { AudioService } from '../audio.service';
 import { BackendService } from '../backend.service';
 
@@ -12,32 +11,31 @@ interface ChatMessage {
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.css']
 })
 export class ChatComponent {
-  @ViewChild('chatBox') chatBox!: ElementRef<HTMLDivElement>;
+  @ViewChild('chatBox') readonly chatBox!: ElementRef<HTMLDivElement>;
 
-  isRecording = false;
-  status = 'Ready';
-  currentTranscript = '';
-  isProcessing = false;
-  chatMessages: ChatMessage[] = [];
+  private readonly audioService = inject(AudioService);
+  private readonly backendService = inject(BackendService);
+  private readonly ngZone = inject(NgZone);
+
+  protected readonly isRecording = signal(false);
+  protected readonly status = signal('Ready');
+  protected readonly currentTranscript = signal('');
+  protected readonly isProcessing = signal(false);
+  protected readonly chatMessages = signal<ChatMessage[]>([]);
+
   private transcriptSubscription: any;
-  private sessionId = crypto.randomUUID();
+  private readonly sessionId = crypto.randomUUID();
 
-  constructor(
-    private audioService: AudioService,
-    private backendService: BackendService,
-    private ngZone: NgZone
-  ) {}
-
-  toggleRecording() {
-    if (!this.isRecording) {
-      this.status = 'Listening...';
-      this.isRecording = true;
-      this.currentTranscript = '';
+  protected toggleRecording() {
+    if (!this.isRecording()) {
+      this.status.set('Listening...');
+      this.isRecording.set(true);
+      this.currentTranscript.set('');
 
       const transcript$ = this.audioService.startSpeechRecognition();
 
@@ -45,66 +43,63 @@ export class ChatComponent {
         next: (text) => {
           this.ngZone.run(() => {
             if (text) {
-              this.currentTranscript = text;
+              this.currentTranscript.set(text);
             }
           });
         },
         complete: () => {
           this.ngZone.run(() => {
-            this.isRecording = false;
-            this.status = 'Ready';
-            if (this.currentTranscript) {
-              this.processMessage(this.currentTranscript);
+            this.isRecording.set(false);
+            this.status.set('Ready');
+            if (this.currentTranscript()) {
+              this.processMessage(this.currentTranscript());
             }
           });
         },
         error: () => {
           this.ngZone.run(() => {
-            this.isRecording = false;
-            this.status = 'Error - try again';
+            this.isRecording.set(false);
+            this.status.set('Error - try again');
           });
         }
       });
     } else {
       this.audioService.stopRecording();
-      this.isRecording = false;
+      this.isRecording.set(false);
     }
   }
 
   private processMessage(transcript: string) {
-    this.chatMessages.push({
-      role: 'user',
-      text: transcript,
-      timestamp: new Date().toLocaleTimeString()
-    });
+    this.chatMessages.update((messages) => [
+      ...messages,
+      { role: 'user', text: transcript, timestamp: new Date().toLocaleTimeString() }
+    ]);
     this.scrollToBottom();
-    this.isProcessing = true;
-    this.status = 'Thinking...';
+    this.isProcessing.set(true);
+    this.status.set('Thinking...');
 
     this.backendService.sendChatMessage(transcript, this.sessionId).subscribe({
       next: (res) => {
         this.ngZone.run(() => {
           const reply = res?.data?.reply || '[No reply]';
-          this.chatMessages.push({
-            role: 'ai',
-            text: reply,
-            timestamp: new Date().toLocaleTimeString()
-          });
+          this.chatMessages.update((messages) => [
+            ...messages,
+            { role: 'ai', text: reply, timestamp: new Date().toLocaleTimeString() }
+          ]);
           this.audioService.speak(reply);
-          this.isProcessing = false;
-          this.status = 'Ready';
+          this.isProcessing.set(false);
+          this.status.set('Ready');
           this.scrollToBottom();
         });
       },
       error: () => {
         this.ngZone.run(() => {
-          this.chatMessages.push({
-            role: 'ai',
-            text: '[Chat backend unavailable]',
-            timestamp: new Date().toLocaleTimeString()
-          });
-          this.isProcessing = false;
-          this.status = 'Error - try again';
+          this.chatMessages.update((messages) => [
+            ...messages,
+            { role: 'ai', text: '[Chat backend unavailable]', timestamp: new Date().toLocaleTimeString() }
+          ]);
+          this.isProcessing.set(false);
+          this.status.set('Error - try again');
           this.scrollToBottom();
         });
       }
@@ -120,8 +115,8 @@ export class ChatComponent {
     }, 100);
   }
 
-  clearChat() {
-    this.chatMessages = [];
-    this.status = 'Ready';
+  protected clearChat() {
+    this.chatMessages.set([]);
+    this.status.set('Ready');
   }
 }
