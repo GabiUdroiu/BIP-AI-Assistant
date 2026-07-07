@@ -1,0 +1,57 @@
+<div class="dashboard">
+  <aside class="sidebar">
+    <h2>Tables</h2>
+    <button
+      *ngFor="let table of tables()"
+      class="table-btn"
+      [class.active]="table === selectedTable()"
+      (click)="selectTable(table)"
+    >
+      {{ table }}
+    </button>
+  </aside>
+
+  <main class="content">
+    <div class="error" *ngIf="errorMessage()">{{ errorMessage() }}</div>
+
+    <div *ngIf="!selectedTable()" class="empty">Select a table to view and insert data.</div>
+
+    <div *ngIf="selectedTable()">
+      <h2>{{ selectedTable() }}</h2>
+
+      <form class="insert-form" (ngSubmit)="submit()">
+        <div class="field" *ngFor="let col of columns()">
+          <label>
+            {{ col.name }}
+            <span class="type">{{ col.type }}</span>
+            <span class="pk" *ngIf="col.primary_key">PK</span>
+          </label>
+          <input
+            type="text"
+            [ngModel]="formData()[col.name] || ''"
+            (ngModelChange)="updateField(col.name, $event)"
+            name="{{ col.name }}"
+          />
+        </div>
+        <button type="submit" class="btn-insert">Insert Row</button>
+      </form>
+
+      <table class="rows-table" *ngIf="rows().length > 0">
+        <thead>
+          <tr>
+            <th *ngFor="let key of rowColumns(rows()[0])">{{ key }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows()">
+            <td *ngFor="let key of rowColumns(row)">{{ row[key] }}</td>
+            <td><button class="btn-delete" (click)="deleteRow(row)">Delete</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="empty" *ngIf="rows().length === 0">No rows yet.</div>
+    </div>
+  </main>
+</div>

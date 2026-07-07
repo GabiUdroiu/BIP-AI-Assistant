@@ -6,7 +6,7 @@ if sys.stdout.encoding != "utf-8":
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import chat, voice
+from app.api.routes import admin, chat, voice
 from app.core.config import get_settings
 from app.db.models import Base
 from app.db.session import get_engine
@@ -24,6 +24,7 @@ app.add_middleware(
 
 app.include_router(voice.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
 
 
 @app.on_event("startup")

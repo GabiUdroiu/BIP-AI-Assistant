@@ -18,7 +18,7 @@ export class AudioService {
       this.recordAudio()
         .then(audioBlob => firstValueFrom(this.backendService.sendVoiceMessage(audioBlob)))
         .then(res => {
-          observer.next(res?.message || '[No speech detected]');
+          observer.next(res?.data?.message || '[No speech detected]');
           observer.complete();
         })
         .catch(e => {

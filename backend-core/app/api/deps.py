@@ -4,7 +4,8 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.session import get_db
+from app.db.session import get_db, get_engine
+from app.services.admin_service import AdminService
 from app.services.chat_providers.base import ChatProvider
 from app.services.chat_providers.groq_provider import GroqProvider
 from app.services.chat_providers.openrouter_provider import OpenRouterProvider
@@ -56,3 +57,8 @@ def get_chat_provider(name: str | None = None) -> ChatProvider:
 
 def get_conversation_service(db: Session = Depends(get_db)) -> ConversationService:
     return ConversationService(db)
+
+
+@lru_cache
+def get_admin_service() -> AdminService:
+    return AdminService(get_engine())

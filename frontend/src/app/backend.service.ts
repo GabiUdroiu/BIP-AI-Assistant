@@ -13,4 +13,8 @@ export class BackendService {
     formData.append('audio', audioBlob);
     return this.http.post(`${this.apiUrl}/voice/process`, formData);
   }
+
+  sendChatMessage(message: string, sessionId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/chat`, { message, session_id: sessionId });
+  }
 }
