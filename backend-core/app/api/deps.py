@@ -78,4 +78,4 @@ def get_conversation_service(db: Session = Depends(get_db)) -> ConversationServi
 
 @lru_cache
 def get_admin_service() -> AdminService:
-    return AdminService(get_engine())
+    return AdminService(get_engine(), embedding_service=get_embedding_service())

@@ -1,12 +1,22 @@
 from sqlalchemy import MetaData, Table, delete, insert, select, update
 from sqlalchemy.engine import Engine
 
+from app.services.embedding_service import EmbeddingService
+
 
 class AdminService:
     """Generic reflection-based CRUD over any table in the connected database."""
 
-    def __init__(self, engine: Engine) -> None:
+    # Tables with embedding columns and the field to embed
+    EMBEDDING_TABLES = {
+        "knowledge_chunks": "content",
+        "symptom_reference": "description",
+        "medical_information_entries": "general_usage_info",
+    }
+
+    def __init__(self, engine: Engine, embedding_service: EmbeddingService | None = None) -> None:
         self._engine = engine
+        self._embedding_service = embedding_service
         self._metadata = MetaData()
         self._metadata.reflect(bind=engine)
 
@@ -47,6 +57,17 @@ class AdminService:
 
     def insert_row(self, table_name: str, data: dict) -> dict:
         table = self._get_table(table_name)
+
+        # Auto-generate embedding if table supports it
+        if table_name in self.EMBEDDING_TABLES and self._embedding_service:
+            text_field = self.EMBEDDING_TABLES[table_name]
+            if "embedding" not in data and text_field in data:
+                try:
+                    embedding = self._embedding_service.embed(data[text_field])
+                    data["embedding"] = embedding
+                except Exception as e:
+                    print(f"Warning: Could not generate embedding for {table_name}: {e}")
+
         with self._engine.begin() as conn:
             result = conn.execute(insert(table).values(**data).returning(table))
             row = result.fetchone()
@@ -54,6 +75,11 @@ class AdminService:
 
     def update_row(self, table_name: str, pk_column: str, pk_value: str, data: dict) -> dict:
         table = self._get_table(table_name)
+
+        # Validate column name to prevent injection
+        if pk_column not in [c.name for c in table.columns]:
+            raise ValueError(f"Invalid column: {pk_column}")
+
         with self._engine.begin() as conn:
             result = conn.execute(
                 update(table).where(table.c[pk_column] == pk_value).values(**data).returning(table)
@@ -63,5 +89,10 @@ class AdminService:
 
     def delete_row(self, table_name: str, pk_column: str, pk_value: str) -> None:
         table = self._get_table(table_name)
+
+        # Validate column name to prevent injection
+        if pk_column not in [c.name for c in table.columns]:
+            raise ValueError(f"Invalid column: {pk_column}")
+
         with self._engine.begin() as conn:
             conn.execute(delete(table).where(table.c[pk_column] == pk_value))

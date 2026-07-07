@@ -2,7 +2,7 @@
   <div class="card">
     <div class="card-header">
       <h1>Voice Assistant</h1>
-      <span class="status">{{ status() }}</span>
+      <span class="status" [class.recording]="isRecording()">{{ status() }}</span>
     </div>
 
     <div class="chat-box" #chatBox>
@@ -16,9 +16,13 @@
       }
 
       @if (chatMessages().length === 0) {
-        <div class="empty">Press the mic and start talking.</div>
+        <div class="empty">Start talking...</div>
       }
     </div>
+
+    @if (isRecording()) {
+      <canvas #waveform class="waveform" width="460" height="60"></canvas>
+    }
 
     @if (currentTranscript() && isRecording()) {
       <div class="transcript">{{ currentTranscript() }}</div>
@@ -32,10 +36,7 @@
     }
 
     <div class="controls">
-      <button class="btn-clear" (click)="clearChat()">Clear</button>
-      <button class="btn-mic" [class.recording]="isRecording()" (click)="toggleRecording()">
-        {{ isRecording() ? 'Stop' : 'Talk' }}
-      </button>
+      <button class="btn-clear" (click)="clearChat()">Clear Chat</button>
     </div>
   </div>
 </div>
