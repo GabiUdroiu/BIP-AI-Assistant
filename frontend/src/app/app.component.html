@@ -1,0 +1,32 @@
+<div class="page">
+  <div class="card">
+    <div class="card-header">
+      <h1>Voice Assistant</h1>
+      <span class="status">{{ status }}</span>
+    </div>
+
+    <div class="chat-box" #chatBox>
+      <div *ngFor="let msg of chatMessages" class="message" [ngClass]="msg.role">
+        <div class="bubble">
+          <p>{{ msg.text }}</p>
+          <span class="timestamp">{{ msg.timestamp }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="chatMessages.length === 0" class="empty">
+        Press the mic and start talking.
+      </div>
+    </div>
+
+    <div class="transcript" *ngIf="currentTranscript && isRecording">
+      {{ currentTranscript }}
+    </div>
+
+    <div class="controls">
+      <button class="btn-clear" (click)="clearChat()">Clear</button>
+      <button class="btn-mic" [ngClass]="{ recording: isRecording }" (click)="toggleRecording()">
+        {{ isRecording ? 'Stop' : 'Talk' }}
+      </button>
+    </div>
+  </div>
+</div>
