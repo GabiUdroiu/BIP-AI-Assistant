@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
     # openrouter_model: str = "liquid/lfm-2.5-1.2b-instruct:free"
     openrouter_model: str = "openai/gpt-oss-20b:free"
+    embedding_model: str = "openai/text-embedding-3-small"
+    embedding_dimensions: int = 768
 
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     groq_model: str = "llama-3.1-8b-instant"

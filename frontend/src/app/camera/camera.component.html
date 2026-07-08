@@ -1,0 +1,23 @@
+<div class="camera-container">
+  @if (errorMessage) {
+    <div class="error">{{ errorMessage }}</div>
+  }
+
+  @if (!errorMessage) {
+    <div class="video-wrapper">
+      <video
+        #videoElement
+        class="video-feed"
+        autoplay
+        playsinline
+        muted
+      ></video>
+      <canvas
+        #overlayCanvas
+        class="overlay-canvas"
+        width="640"
+        height="480"
+      ></canvas>
+    </div>
+  }
+</div>

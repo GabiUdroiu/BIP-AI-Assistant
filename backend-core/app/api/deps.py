@@ -10,6 +10,7 @@ from app.services.chat_providers.base import ChatProvider
 from app.services.chat_providers.groq_provider import GroqProvider
 from app.services.chat_providers.openrouter_provider import OpenRouterProvider
 from app.services.conversation_service import ConversationService
+from app.services.embedding_service import EmbeddingService
 from app.services.prompt_service import PromptService
 from app.services.rag_service import RagService
 from app.services.speech_service import SpeechService
@@ -26,13 +27,29 @@ def get_speech_service() -> SpeechService:
 
 
 @lru_cache
+def get_embedding_service() -> EmbeddingService | None:
+    settings = get_settings()
+    if not settings.openrouter_api_key:
+        return None
+    return EmbeddingService(
+        api_key=settings.openrouter_api_key,
+        model=settings.embedding_model,
+        dimensions=settings.embedding_dimensions,
+    )
+
+
+@lru_cache
 def get_rag_service() -> RagService:
-    return RagService()
+    settings = get_settings()
+    engine = get_engine() if settings.database_url else None
+    return RagService(engine=engine, embedding_service=get_embedding_service())
 
 
 @lru_cache
 def get_prompt_service() -> PromptService:
-    return PromptService()
+    settings = get_settings()
+    engine = get_engine() if settings.database_url else None
+    return PromptService(engine=engine)
 
 
 @lru_cache
@@ -61,4 +78,4 @@ def get_conversation_service(db: Session = Depends(get_db)) -> ConversationServi
 
 @lru_cache
 def get_admin_service() -> AdminService:
-    return AdminService(get_engine())
+    return AdminService(get_engine(), embedding_service=get_embedding_service())

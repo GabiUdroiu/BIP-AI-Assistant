@@ -14,6 +14,10 @@ class InsertRequest(BaseModel):
     data: dict[str, Any]
 
 
+class UpdateRequest(BaseModel):
+    data: dict[str, Any]
+
+
 class ColumnInfo(BaseModel):
     name: str
     type: str
@@ -48,6 +52,21 @@ def insert_row(table_name: str, request: InsertRequest, admin_service: AdminServ
     _require_table(admin_service, table_name)
     try:
         return ApiResponse.ok(admin_service.insert_row(table_name, request.data))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/tables/{table_name}/rows/{pk_column}/{pk_value}")
+def update_row(
+    table_name: str,
+    pk_column: str,
+    pk_value: str,
+    request: UpdateRequest,
+    admin_service: AdminService = Depends(get_admin_service),
+):
+    _require_table(admin_service, table_name)
+    try:
+        return ApiResponse.ok(admin_service.update_row(table_name, pk_column, pk_value, request.data))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
