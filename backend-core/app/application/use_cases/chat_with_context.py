@@ -61,19 +61,10 @@ class ChatWithContextUseCase(UseCase):
         try:
             self.logger.info(f"Processing chat: {user_message[:100]}...")
 
-            # Get system prompt
+            # Get system prompt (with strict brevity enforced)
             system_prompt = self._prompt_service.get_system_prompt()
+            system_prompt += "\n\n⚠️ STRICT: Keep ALL responses to 2-3 sentences MAXIMUM. No long explanations."
             self.logger.debug("Retrieved system prompt")
-
-            # Retrieve relevant context from RAG
-            try:
-                facts = self._rag_service.retrieve(user_message)
-                if facts:
-                    system_prompt += "\n\nRelevant facts:\n" + "\n".join(facts)
-                    self.logger.info(f"Retrieved {len(facts)} relevant facts")
-            except Exception as e:
-                self.logger.warning(f"RAG retrieval failed (continuing anyway): {e}")
-                # Don't fail - continue without RAG context
 
             # Get conversation history
             history = self._conversation_service.get_history(session_id)

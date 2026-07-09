@@ -58,15 +58,21 @@ app = FastAPI(title="Voice Chat API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_origins=["*"],  # Temporarily allow all for debugging
+    allow_credentials=False,  # Can't use True with "*"
+    allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
-    expose_headers=["*"],
 )
 
 # Register centralized error handlers
 register_error_handlers(app)
+
+# ============ Debug Endpoint ============
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for CORS testing."""
+    return {"status": "ok", "message": "Backend is running"}
+
 
 # ============ Presentation Layer v1 Routes ============
 app.include_router(voice.router, prefix="/api")

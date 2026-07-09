@@ -9,13 +9,15 @@ class Settings(BaseSettings):
 
     port: int = 8080
     cors_origins: list[str] = [
-        "*",  # Allow all origins (wildcard)
-        # Local development
+        # Local development (HTTP + HTTPS)
         "http://localhost:5173",
         "http://localhost:3000",
+        "http://localhost:4200",
         "http://localhost:8000",
         "https://localhost:5173",
         "https://localhost:3000",
+        "https://localhost:4200",
+        "https://localhost:8000",
         # Ngrok tunneling
         "https://donut-cheek-silencer.ngrok-free.dev",
         "https://powdering-junction-verbally.ngrok-free.dev",
