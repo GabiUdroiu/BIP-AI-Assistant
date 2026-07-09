@@ -24,10 +24,14 @@ async def websocket_voice_endpoint(websocket: WebSocket):
 
     # Initialize services inside the endpoint
     try:
+        from app.db.session import get_db
         speech_service = get_speech_service()
-        conversation_service = get_conversation_service()
         rag_service = get_rag_service()
         prompt_service = get_prompt_service()
+
+        # For conversation service, we need a DB session
+        db = next(get_db())
+        conversation_service = ConversationService(db)
     except Exception as e:
         logger.error(f"❌ Failed to initialize services: {e}")
         await websocket.send_text(json.dumps({"type": "error", "message": f"Service initialization failed: {str(e)}"}))

@@ -24,17 +24,7 @@ function App() {
   const [isAwaitingWakeWord, setIsAwaitingWakeWord] = useState(CONFIG.LISTENING_MODE === 'wake-word-api');
   const { isRecording, volumeLevel, startSpeechRecognition, stopRecording, speak } = useAudioRecorder();
 
-  // Only initialize wake word detection in wake-word-api mode
-  // Using config to prevent unnecessary hook initialization
-  if (CONFIG.LISTENING_MODE === 'wake-word-api') {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useWakeWordDetection(() => {
-      if (isAwaitingWakeWord) {
-        console.log('🎯 Wake word triggered, starting recording...');
-        handleStartRecording();
-      }
-    });
-  }
+  // Wake word detection disabled - using simple click-to-record instead
 
   // Mode 2: WebSocket Streaming
   const { isStreaming, volumeLevel: wsVolumeLevel, startStreaming, stopStreaming } = useWebSocketStreaming(
@@ -71,29 +61,14 @@ function App() {
   };
 
   const handleToggleRecording = async () => {
-    if (CONFIG.LISTENING_MODE === 'wake-word-api') {
-      // Wake word mode
-      if (isAwaitingWakeWord) {
-        setIsAwaitingWakeWord(false);
-        setStatus('Disabled');
-      } else {
-        setIsAwaitingWakeWord(true);
-        setStatus('Listening for "hey abubakar"...');
-      }
-    } else {
-      // WebSocket streaming mode
-      if (!isStreaming) {
-        setStatus('Connecting...');
-        try {
-          await startStreaming();
-          setStatus('Streaming - Say "hey abubakar"');
-        } catch (err) {
-          console.error('✗ Streaming error:', err);
-          setStatus('Error - try again');
-        }
-      } else {
-        stopStreaming();
-        setStatus('Ready');
+    // Simple click-to-record mode
+    if (!isRecording) {
+      setStatus('Recording...');
+      try {
+        await handleStartRecording();
+      } catch (err) {
+        console.error('✗ Recording error:', err);
+        setStatus('Error - try again');
       }
     }
   };

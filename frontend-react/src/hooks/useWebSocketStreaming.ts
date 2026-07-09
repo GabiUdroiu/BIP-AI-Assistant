@@ -35,8 +35,15 @@ export const useWebSocketStreaming = (
     return new Promise<void>(async (resolve, reject) => {
       isStoppingRef.current = false;
       try {
-        // Hardcoded backend WebSocket URL
-        const wsUrl = 'wss://powdering-junction-verbally.ngrok-free.dev/ws/voice';
+        // Smart WebSocket URL - use localhost for local dev, ngrok for production
+        let wsUrl: string;
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          // Local development
+          wsUrl = 'ws://localhost:8080/ws/voice';
+        } else {
+          // Production/ngrok
+          wsUrl = 'wss://powdering-junction-verbally.ngrok-free.dev/ws/voice';
+        }
         console.log('📡 Connecting to WebSocket:', wsUrl);
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;

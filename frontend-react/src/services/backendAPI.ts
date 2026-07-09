@@ -1,6 +1,14 @@
 // Use dynamic backend host to support phone access
-const backendHost = import.meta.env.VITE_BACKEND_HOST || `${window.location.hostname}:8080`;
-export const API_URL = `http://${backendHost}/api`;
+let API_URL: string;
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  // Local development - HTTP
+  API_URL = 'http://localhost:8080/api';
+} else {
+  // Production/ngrok - HTTPS
+  API_URL = 'https://powdering-junction-verbally.ngrok-free.dev/api';
+}
+
+export { API_URL };
 
 export interface ApiResponse<T> {
   data: T | null;

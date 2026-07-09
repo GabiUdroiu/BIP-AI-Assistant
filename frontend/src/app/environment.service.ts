@@ -23,8 +23,8 @@ export class EnvironmentService {
     let apiUrl: string;
 
     if (isDev) {
-      // Development: point to backend on 8080
-      apiUrl = 'http://localhost:8080/api';
+      // Development: point to ngrok backend
+      apiUrl = 'https://powdering-junction-verbally.ngrok-free.dev/api';
     } else if (isProduction) {
       // Production: use relative path (proxied by nginx/server)
       apiUrl = '/api';

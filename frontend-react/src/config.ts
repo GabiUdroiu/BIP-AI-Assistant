@@ -15,7 +15,7 @@ export const CONFIG = {
   // Choose listening mode:
   // 'wake-word-api' - Web Speech API continuous listening with "hey abubakar" trigger
   // 'websocket-streaming' - Continuous WebSocket streaming to backend
-  LISTENING_MODE: (import.meta.env.VITE_LISTENING_MODE || 'wake-word-api') as ListeningMode,
+  LISTENING_MODE: 'wake-word-api' as ListeningMode, // Click-to-record mode (no WebSocket)
 
   WAKE_WORD: 'hey abubakar',
   WAKE_WORD_CONFIDENCE: 0.6, // 0-1, higher = more strict
