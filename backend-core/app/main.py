@@ -71,7 +71,7 @@ register_error_handlers(app)
 @app.get("/health")
 async def health_check():
     """Health check endpoint for CORS testing."""
-    return {"status": "ok", "message": "Backend is running"}
+    return {"status": "ok", "message": "Backend is running!"}
 
 
 # ============ Presentation Layer v1 Routes ============
