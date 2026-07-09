@@ -14,6 +14,7 @@ from app.core.logging import logger
 from app.infrastructure.database.models import Base
 from app.infrastructure.database.session import get_engine
 from app.seeds.populate_medical_scenarios import seed_medical_scenarios, seed_system_prompt
+from app.seeds.populate_system_prompt_rules import seed_system_prompt_rules
 
 settings = get_settings()
 
@@ -30,10 +31,14 @@ async def lifespan(app: FastAPI):
             Base.metadata.create_all(bind=engine)
             logger.info("✓ Database tables ready")
 
-            # Auto-seed medical scenarios and system prompt if not already populated
+            # Auto-seed medical scenarios, system prompt, and prompt rules
             try:
                 seed_medical_scenarios(engine)
                 seed_system_prompt(engine)
+                from app.infrastructure.database.session import SessionLocal
+                db = SessionLocal()
+                seed_system_prompt_rules(db)
+                db.close()
                 logger.info("✓ Medical knowledge base ready")
             except Exception as e:
                 logger.warning(f"Medical seeding info: {e}")

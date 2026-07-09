@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Mic, Square } from 'lucide-react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
@@ -19,7 +19,10 @@ interface ChatMessage {
 function ChatPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('Ready');
+  const [typingText, setTypingText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const chatBoxRef = useRef<HTMLDivElement>(null);
+  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mode 1: Wake Word Detection (only active in wake-word-api mode)
   const [isAwaitingWakeWord, setIsAwaitingWakeWord] = useState(CONFIG.LISTENING_MODE === 'wake-word-api');
@@ -39,11 +42,33 @@ function ChatPage() {
     }
   );
 
+  const streamText = (text: string, onComplete: () => void | Promise<void>) => {
+    setTypingText('');
+    setIsTyping(true);
+    let index = 0;
+
+    const typeNextCharacter = () => {
+      if (index < text.length) {
+        setTypingText((prev) => prev + text[index]);
+        index++;
+        typingIntervalRef.current = setTimeout(typeNextCharacter, 20); // Fast typing
+      } else {
+        setIsTyping(false);
+        const result = onComplete();
+        if (result instanceof Promise) {
+          result.catch((err) => console.error('Error in typing completion:', err));
+        }
+      }
+    };
+
+    typeNextCharacter();
+  };
+
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
-  }, [chatMessages]);
+  }, [chatMessages, typingText]);
 
   const handleStartRecording = async () => {
     setStatus('Recording...');
@@ -76,13 +101,20 @@ function ChatPage() {
 
   const handleWebSocketResponse = async (reply: string) => {
     console.log('💭 Handling WebSocket response:', reply);
-    const newAiMsg: ChatMessage = {
-      role: 'ai',
-      text: reply,
-      timestamp: new Date().toLocaleTimeString(),
-    };
+    const timestamp = new Date().toLocaleTimeString();
 
-    setChatMessages((prev) => [...prev, newAiMsg]);
+    // Add message with empty text first, then stream it
+    setChatMessages((prev) => [...prev, { role: 'ai', text: '', timestamp }]);
+
+    // Add message with full text immediately
+    setChatMessages((prev) => {
+      const updated = [...prev];
+      if (updated[updated.length - 1].text === '') {
+        updated[updated.length - 1].text = reply;
+      }
+      return updated;
+    });
+
     setStatus('Speaking...');
 
     // Stop WebSocket streaming while bot speaks (prevents hearing itself)
@@ -141,13 +173,20 @@ function ChatPage() {
       const reply = result.data?.reply || 'Sorry, I could not understand that.';
       console.log('Reply text:', reply);
 
-      const newAiMsg: ChatMessage = {
-        role: 'ai',
-        text: reply,
-        timestamp: new Date().toLocaleTimeString(),
-      };
+      const timestamp = new Date().toLocaleTimeString();
 
-      setChatMessages((prev) => [...prev, newAiMsg]);
+      // Add message with empty text, then stream it
+      setChatMessages((prev) => [...prev, { role: 'ai', text: '', timestamp }]);
+
+      // Add message with full text immediately
+      setChatMessages((prev) => {
+        const updated = [...prev];
+        if (updated[updated.length - 1].text === '') {
+          updated[updated.length - 1].text = reply;
+        }
+        return updated;
+      });
+
       setStatus('Speaking...');
 
       // Speak and wait for it to finish
@@ -170,8 +209,19 @@ function ChatPage() {
 
   const clearChat = () => {
     setChatMessages([]);
+    setTypingText('');
+    setIsTyping(false);
     setStatus('Ready');
   };
+
+  useEffect(() => {
+    return () => {
+      // Cleanup typing interval on unmount
+      if (typingIntervalRef.current) {
+        clearTimeout(typingIntervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -199,12 +249,14 @@ function ChatPage() {
             {chatMessages.length === 0 ? (
               <div className="empty-state">Press the mic and start talking.</div>
             ) : (
-              chatMessages.map((msg, idx) => (
-                <div key={idx} className={`message ${msg.role}`}>
-                  <div className="bubble">{msg.text}</div>
-                  <span className="timestamp">{msg.timestamp}</span>
-                </div>
-              ))
+              <>
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`message ${msg.role}`}>
+                    <div className="bubble">{msg.text}</div>
+                    <span className="timestamp">{msg.timestamp}</span>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </div>

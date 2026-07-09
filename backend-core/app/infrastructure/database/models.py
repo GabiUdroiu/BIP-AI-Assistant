@@ -96,6 +96,42 @@ class SystemPrompt(Base):
     )
 
 
+class SystemPromptRule(Base):
+    """
+    System prompt rule entity.
+    Stores individual rules for RAG-based retrieval.
+    """
+    __tablename__ = "system_prompt_rules"
+
+    id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+        doc="Unique rule identifier"
+    )
+    rule_type: Mapped[str] = mapped_column(
+        String,
+        index=True,
+        doc="Rule category: medical-only, safety, brevity, escalation, etc."
+    )
+    title: Mapped[str] = mapped_column(
+        String,
+        doc="Short rule title"
+    )
+    content: Mapped[str] = mapped_column(
+        Text,
+        doc="Rule content/instruction"
+    )
+    priority: Mapped[int] = mapped_column(
+        doc="Priority for retrieval (1=highest)"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        doc="Creation timestamp"
+    )
+
+
 class MedicalScenario(Base):
     """
     Medical scenario entity.
