@@ -1,14 +1,14 @@
-// Use dynamic backend host to support phone access
-let API_URL: string;
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-  // Local development - HTTP
-  API_URL = 'http://localhost:8080/api';
-} else {
-  // Production/ngrok - HTTPS
-  API_URL = 'https://powdering-junction-verbally.ngrok-free.dev/api';
-}
+import { API_ENDPOINTS, API_ERRORS } from '../constants/api';
 
-export { API_URL };
+// Determine API URL based on environment
+const getApiUrl = (): string => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8080/api';
+  }
+  return 'https://powdering-junction-verbally.ngrok-free.dev/api';
+};
+
+export const API_URL = getApiUrl();
 
 export interface ApiResponse<T> {
   data: T | null;
@@ -16,21 +16,32 @@ export interface ApiResponse<T> {
   error_code: string | null;
 }
 
+export interface VoiceResponse {
+  message: string;
+}
+
+/**
+ * Send audio blob to backend for voice processing
+ */
 export const sendVoiceMessage = async (
   audioBlob: Blob,
-): Promise<ApiResponse<{ message: string }>> => {
+): Promise<ApiResponse<VoiceResponse>> => {
   const formData = new FormData();
-  // Ensure the filename is provided so the backend treats it as a file upload
-  formData.append("audio", audioBlob, "voice.webm");
+  formData.append('audio', audioBlob, 'voice.webm');
 
-  const response = await fetch(`${API_URL}/voice/process`, {
-    method: "POST",
-    body: formData,
-  });
+  try {
+    const response = await fetch(`${API_URL}${API_ENDPOINTS.VOICE.PROCESS}`, {
+      method: 'POST',
+      body: formData,
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to send voice message");
+    if (!response.ok) {
+      throw new Error(API_ERRORS.VOICE_FAILED);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error(API_ERRORS.VOICE_FAILED, error);
+    throw error;
   }
-
-  return response.json();
 };

@@ -4,7 +4,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.session import get_db, get_engine
+from app.infrastructure.database.session import get_db, get_engine
 from app.services.admin_service import AdminService
 from app.services.chat_providers.base import ChatProvider
 from app.services.chat_providers.groq_provider import GroqProvider

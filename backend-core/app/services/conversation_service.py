@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Message
+from app.infrastructure.database.models import Message
 
 
 class ConversationService:

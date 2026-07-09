@@ -1,3 +1,8 @@
+"""
+Database session management.
+Infrastructure layer for database access.
+"""
+
 from functools import lru_cache
 import os
 
@@ -10,6 +15,7 @@ from app.core.logging import logger
 
 
 def _normalize_url(url: str) -> str:
+    """Normalize database URL for proper driver selection."""
     if url.startswith("postgresql://"):
         return url.replace("postgresql://", "postgresql+psycopg://", 1)
     return url
@@ -17,7 +23,16 @@ def _normalize_url(url: str) -> str:
 
 @lru_cache
 def get_engine():
-    """Create and configure the database engine with connection pooling."""
+    """
+    Create and configure the database engine with connection pooling.
+
+    Features:
+    - Connection pooling with size/overflow configuration
+    - Pool recycling to prevent stale connections
+    - Pre-ping to verify connection health
+    - SQLite foreign key support
+    - In-memory fallback for testing
+    """
     settings = get_settings()
 
     if not settings.database_url:
@@ -30,7 +45,9 @@ def get_engine():
     pool_recycle = int(os.getenv("DB_POOL_RECYCLE", 3600))
     echo_sql = os.getenv("SQL_ECHO", "false").lower() == "true"
 
-    logger.info(f"Database pool configuration: size={pool_size}, overflow={max_overflow}, recycle={pool_recycle}s")
+    logger.info(
+        f"Database pool configuration: size={pool_size}, overflow={max_overflow}, recycle={pool_recycle}s"
+    )
 
     engine = create_engine(
         _normalize_url(settings.database_url),
@@ -55,10 +72,18 @@ def get_engine():
 
 @lru_cache
 def get_session_factory() -> sessionmaker:
+    """Get the session factory."""
     return sessionmaker(bind=get_engine(), expire_on_commit=False)
 
 
 def get_db() -> Session:
+    """
+    Database session dependency.
+    Yields a session and ensures proper cleanup.
+
+    Usage in FastAPI:
+        db: Session = Depends(get_db)
+    """
     session_factory = get_session_factory()
     db = session_factory()
     try:

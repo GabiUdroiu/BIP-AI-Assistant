@@ -14,14 +14,14 @@ export class BackendService {
     formData.append('audio', audioBlob);
     return this.http.post<ApiResponse<VoiceResponse>>(
       `${this.env.getApiUrl()}/voice/process`,
-      formData
+      formData,
     );
   }
 
   sendChatMessage(message: string, sessionId: string): Observable<ApiResponse<ChatResponse>> {
-    return this.http.post<ApiResponse<ChatResponse>>(
-      `${this.env.getApiUrl()}/chat`,
-      { message, session_id: sessionId }
-    );
+    return this.http.post<ApiResponse<ChatResponse>>(`http://localhost:8080/api/chat`, {
+      message,
+      session_id: sessionId,
+    });
   }
 }

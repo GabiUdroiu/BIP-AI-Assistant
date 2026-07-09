@@ -8,7 +8,18 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="APP_", env_file=".env", extra="ignore")
 
     port: int = 8080
-    cors_origins: list[str] = ["*"]
+    cors_origins: list[str] = [
+        "*",  # Allow all origins (wildcard)
+        # Local development
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://localhost:5173",
+        "https://localhost:3000",
+        # Ngrok tunneling
+        "https://donut-cheek-silencer.ngrok-free.dev",
+        "https://powdering-junction-verbally.ngrok-free.dev",
+    ]
 
     whisper_model_size: str = "tiny.en"
     whisper_device: str = "cpu"

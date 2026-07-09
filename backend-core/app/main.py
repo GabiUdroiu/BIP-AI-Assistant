@@ -7,11 +7,13 @@ if sys.stdout.encoding != "utf-8":
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, chat, voice, streaming
+from app.presentation.api.v1.routes import voice, chat, streaming, admin
+from app.presentation.error_handler import register_error_handlers
 from app.core.config import get_settings
 from app.core.logging import logger
-from app.db.models import Base
-from app.db.session import get_engine
+from app.infrastructure.database.models import Base
+from app.infrastructure.database.session import get_engine
+from app.seeds.populate_medical_scenarios import seed_medical_scenarios, seed_system_prompt
 
 settings = get_settings()
 
@@ -22,8 +24,19 @@ async def lifespan(app: FastAPI):
     # Startup
     try:
         if settings.database_url:
-            Base.metadata.create_all(bind=get_engine())
+            engine = get_engine()
+
+            # Create all tables
+            Base.metadata.create_all(bind=engine)
             logger.info("✓ Database tables ready")
+
+            # Auto-seed medical scenarios and system prompt if not already populated
+            try:
+                seed_medical_scenarios(engine)
+                seed_system_prompt(engine)
+                logger.info("✓ Medical knowledge base ready")
+            except Exception as e:
+                logger.warning(f"Medical seeding info: {e}")
         else:
             logger.warning("No DATABASE_URL configured - chat memory will not persist")
     except Exception as exc:
@@ -41,13 +54,17 @@ app = FastAPI(title="Voice Chat API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     allow_credentials=True,
+    expose_headers=["*"],
 )
 
+# Register centralized error handlers
+register_error_handlers(app)
+
+# ============ Presentation Layer v1 Routes ============
 app.include_router(voice.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
-# WebSocket endpoints (no /api prefix, they handle their own routes)
 app.include_router(streaming.router)
