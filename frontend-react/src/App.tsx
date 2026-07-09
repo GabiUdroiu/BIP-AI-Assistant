@@ -2,8 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Mic, Square } from 'lucide-react';
 import { useAudioRecorder } from './hooks/useAudioRecorder';
+import { useWakeWordDetection } from './hooks/useWakeWordDetection';
+import { useWebSocketStreaming } from './hooks/useWebSocketStreaming';
 import { TechNodeSphere } from './components/TechNodeSphere';
 import { API_URL } from './services/backendAPI';
+import { CONFIG } from './config';
 import './index.css';
 
 interface ChatMessage {
@@ -13,10 +16,33 @@ interface ChatMessage {
 }
 
 function App() {
-  const { isRecording, volumeLevel, startSpeechRecognition, stopRecording, speak } = useAudioRecorder();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState('Ready');
   const chatBoxRef = useRef<HTMLDivElement>(null);
+
+  // Mode 1: Wake Word Detection (only active in wake-word-api mode)
+  const [isAwaitingWakeWord, setIsAwaitingWakeWord] = useState(CONFIG.LISTENING_MODE === 'wake-word-api');
+  const { isRecording, volumeLevel, startSpeechRecognition, stopRecording, speak } = useAudioRecorder();
+
+  // Only initialize wake word detection in wake-word-api mode
+  // Using config to prevent unnecessary hook initialization
+  if (CONFIG.LISTENING_MODE === 'wake-word-api') {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useWakeWordDetection(() => {
+      if (isAwaitingWakeWord) {
+        console.log('🎯 Wake word triggered, starting recording...');
+        handleStartRecording();
+      }
+    });
+  }
+
+  // Mode 2: WebSocket Streaming
+  const { isStreaming, volumeLevel: wsVolumeLevel, startStreaming, stopStreaming } = useWebSocketStreaming(
+    (transcript: string) => {
+      console.log('📨 Transcript from WebSocket:', transcript);
+      processMessage(transcript);
+    }
+  );
 
   useEffect(() => {
     if (chatBoxRef.current) {
@@ -24,24 +50,47 @@ function App() {
     }
   }, [chatMessages]);
 
-  const handleToggleRecording = async () => {
-    if (!isRecording) {
-      setStatus('Listening...');
-      try {
-        const transcript = await startSpeechRecognition();
-        console.log('✓ Got transcript:', transcript);
+  const handleStartRecording = async () => {
+    setStatus('Recording...');
+    try {
+      const transcript = await startSpeechRecognition();
+      console.log('✓ Got transcript:', transcript);
 
-        setStatus('Ready');
-        if (transcript) {
-          processMessage(transcript);
-        }
-      } catch (err) {
-        console.error('✗ Recording error:', err);
-        setStatus('Error - try again');
+      setStatus('Ready');
+      if (transcript) {
+        processMessage(transcript);
+      }
+    } catch (err) {
+      console.error('✗ Recording error:', err);
+      setStatus('Error - try again');
+    }
+  };
+
+  const handleToggleRecording = async () => {
+    if (CONFIG.LISTENING_MODE === 'wake-word-api') {
+      // Wake word mode
+      if (isAwaitingWakeWord) {
+        setIsAwaitingWakeWord(false);
+        setStatus('Disabled');
+      } else {
+        setIsAwaitingWakeWord(true);
+        setStatus('Listening for "hey abubakar"...');
       }
     } else {
-      stopRecording();
-      setStatus('Ready');
+      // WebSocket streaming mode
+      if (!isStreaming) {
+        setStatus('Connecting...');
+        try {
+          await startStreaming();
+          setStatus('Streaming - Say "hey abubakar"');
+        } catch (err) {
+          console.error('✗ Streaming error:', err);
+          setStatus('Error - try again');
+        }
+      } else {
+        stopStreaming();
+        setStatus('Ready');
+      }
     }
   };
 
@@ -78,8 +127,31 @@ function App() {
       };
 
       setChatMessages((prev) => [...prev, newAiMsg]);
-      setStatus('Ready');
-      speak(reply);
+      setStatus('Speaking...');
+
+      // Stop WebSocket streaming while bot speaks (prevents hearing itself)
+      if (CONFIG.LISTENING_MODE === 'websocket-streaming') {
+        console.log('🔇 Pausing stream during TTS...');
+        stopStreaming();
+      }
+
+      // Speak and wait for it to finish
+      await new Promise<void>((resolve) => {
+        const utterance = new SpeechSynthesisUtterance(reply);
+        utterance.onend = () => {
+          console.log('✅ TTS finished');
+          resolve();
+        };
+        window.speechSynthesis.speak(utterance);
+      });
+
+      // Resume WebSocket streaming after bot finishes speaking
+      if (CONFIG.LISTENING_MODE === 'websocket-streaming') {
+        console.log('🔊 Resuming stream...');
+        await startStreaming();
+      }
+
+      setStatus('Listening...');
     } catch (err) {
       setStatus('Error getting response');
       console.error('✗ Chat error:', err);
@@ -103,9 +175,14 @@ function App() {
       <div className="ui-overlay">
         <div className="header">
           <h1>Voice AI</h1>
-          <span className={`status-badge ${isRecording ? 'recording' : ''}`}>
-            {status}
-          </span>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span className="status-badge" style={{ fontSize: '11px', opacity: 0.6 }}>
+              {CONFIG.LISTENING_MODE === 'wake-word-api' ? '🎤 Wake Word' : '📡 WebSocket'}
+            </span>
+            <span className={`status-badge ${isRecording || isStreaming ? 'recording' : ''}`}>
+              {status}
+            </span>
+          </div>
         </div>
 
         <div className="main-content">
@@ -123,9 +200,9 @@ function App() {
           </div>
         </div>
 
-        {isRecording && volumeLevel > 0 && (
+        {(isRecording || isStreaming) && (volumeLevel > 0 || wsVolumeLevel > 0) && (
           <div className="transcript-indicator">
-            Listening...
+            {CONFIG.LISTENING_MODE === 'wake-word-api' ? 'Recording...' : 'Streaming...'}
           </div>
         )}
 
@@ -134,13 +211,15 @@ function App() {
             <button className="btn-clear" onClick={clearChat}>
               Clear
             </button>
-            
-            <button 
-              className={`btn-mic ${isRecording ? 'recording' : ''}`}
+
+            <button
+              className={`btn-mic ${isRecording || isStreaming ? 'recording' : ''}`}
               onClick={handleToggleRecording}
-              title={isRecording ? 'Stop Recording' : 'Start Recording'}
+              title={CONFIG.LISTENING_MODE === 'wake-word-api'
+                ? (isAwaitingWakeWord ? 'Disable listening' : 'Enable listening')
+                : (isStreaming ? 'Stop streaming' : 'Start streaming')}
             >
-              {isRecording ? <Square size={24} /> : <Mic size={24} />}
+              {isRecording || isStreaming ? <Square size={24} /> : <Mic size={24} />}
             </button>
           </div>
         </div>
