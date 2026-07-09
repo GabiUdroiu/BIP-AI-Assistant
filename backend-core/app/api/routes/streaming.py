@@ -17,16 +17,22 @@ router = APIRouter(tags=["streaming"])
 
 
 @router.websocket("/ws/voice")
-async def websocket_voice_endpoint(
-    websocket: WebSocket,
-    speech_service: SpeechService = Depends(get_speech_service),
-    conversation_service: ConversationService = Depends(get_conversation_service),
-    rag_service: RagService = Depends(get_rag_service),
-    prompt_service: PromptService = Depends(get_prompt_service),
-):
+async def websocket_voice_endpoint(websocket: WebSocket):
     """WebSocket endpoint for continuous audio streaming with wake word detection."""
     await websocket.accept()
     logger.info("📡 WebSocket client connected")
+
+    # Initialize services inside the endpoint
+    try:
+        speech_service = get_speech_service()
+        conversation_service = get_conversation_service()
+        rag_service = get_rag_service()
+        prompt_service = get_prompt_service()
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize services: {e}")
+        await websocket.send_text(json.dumps({"type": "error", "message": f"Service initialization failed: {str(e)}"}))
+        await websocket.close(code=1011)
+        return
 
     WAKE_WORD = "hey abubakar".lower()
     session_id = "ws_" + str(websocket.client[1]) if websocket.client else "ws_default"
