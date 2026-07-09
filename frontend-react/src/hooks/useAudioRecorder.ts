@@ -85,13 +85,15 @@ export const useAudioRecorder = () => {
             console.log('Sending voice message to backend...');
             const res = await sendVoiceMessage(audioBlob);
             console.log('Backend response:', res);
-            if (res.success && res.data) {
+            if (!res.error && res.data) {
+              console.log('✓ Got transcript:', res.data.message);
               resolve(res.data.message || '[No speech detected]');
             } else {
+              console.error('✗ Backend error:', res.error);
               reject(new Error(res.error || 'Backend returned an error'));
             }
           } catch (e) {
-            console.error('Voice processing error:', e);
+            console.error('✗ Voice processing error:', e);
             reject(e);
           }
         };

@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { Mic, Square } from 'lucide-react';
 import { useAudioRecorder } from './hooks/useAudioRecorder';
 import { TechNodeSphere } from './components/TechNodeSphere';
+import { API_URL } from './services/backendAPI';
 import './index.css';
 
 interface ChatMessage {
@@ -28,12 +29,14 @@ function App() {
       setStatus('Listening...');
       try {
         const transcript = await startSpeechRecognition();
-        
+        console.log('✓ Got transcript:', transcript);
+
         setStatus('Ready');
         if (transcript) {
           processMessage(transcript);
         }
       } catch (err) {
+        console.error('✗ Recording error:', err);
         setStatus('Error - try again');
       }
     } else {
@@ -42,34 +45,46 @@ function App() {
     }
   };
 
-  const processMessage = (transcript: string) => {
+  const processMessage = async (transcript: string) => {
     const newUserMsg: ChatMessage = {
       role: 'user',
       text: transcript,
       timestamp: new Date().toLocaleTimeString(),
     };
-    
+
     setChatMessages((prev) => [...prev, newUserMsg]);
+    setStatus('Getting response...');
 
-    const responses = [
-      'That sounds great!',
-      'I hear you!',
-      'Interesting, tell me more.',
-      'Got it!',
-      'Nice!',
-      'Understood!',
-      'Processing your request...'
-    ];
-    const reply = responses[Math.floor(Math.random() * responses.length)];
+    try {
+      const response = await fetch(`${API_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: transcript }),
+      });
 
-    const newAiMsg: ChatMessage = {
-      role: 'ai',
-      text: reply,
-      timestamp: new Date().toLocaleTimeString(),
-    };
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
 
-    setChatMessages((prev) => [...prev, newAiMsg]);
-    speak(reply);
+      const result = await response.json();
+      console.log('✓ Chat response:', result);
+      const reply = result.data?.reply || 'Sorry, I could not understand that.';
+      console.log('Reply text:', reply);
+
+      const newAiMsg: ChatMessage = {
+        role: 'ai',
+        text: reply,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+
+      setChatMessages((prev) => [...prev, newAiMsg]);
+      setStatus('Ready');
+      speak(reply);
+    } catch (err) {
+      setStatus('Error getting response');
+      console.error('✗ Chat error:', err);
+      console.error('Error details:', err instanceof Error ? err.message : String(err));
+    }
   };
 
   const clearChat = () => {
