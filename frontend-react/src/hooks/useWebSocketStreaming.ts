@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { CONFIG } from '../config';
 
-export const useWebSocketStreaming = (onTranscript: (text: string) => void) => {
+export const useWebSocketStreaming = (
+  onTranscript: (text: string) => void,
+  onResponse?: (text: string) => void
+) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
@@ -33,8 +35,10 @@ export const useWebSocketStreaming = (onTranscript: (text: string) => void) => {
     return new Promise<void>(async (resolve, reject) => {
       isStoppingRef.current = false;
       try {
-        console.log('📡 Connecting to WebSocket:', CONFIG.WEBSOCKET_URL);
-        const ws = new WebSocket(CONFIG.WEBSOCKET_URL);
+        // Hardcoded backend WebSocket URL
+        const wsUrl = 'wss://powdering-junction-verbally.ngrok-free.dev/ws/voice';
+        console.log('📡 Connecting to WebSocket:', wsUrl);
+        const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         // Set a timeout for connection
@@ -61,6 +65,9 @@ export const useWebSocketStreaming = (onTranscript: (text: string) => void) => {
               console.log('✨ Wake word detected!');
             } else if (data.type === 'chat_response') {
               console.log('💬 Response:', data.text);
+              if (onResponse) {
+                onResponse(data.text);
+              }
             }
           } catch (e) {
             console.error('❌ Failed to parse message:', e);
@@ -147,7 +154,7 @@ export const useWebSocketStreaming = (onTranscript: (text: string) => void) => {
         reject(err);
       }
     });
-  }, [onTranscript, processAudioVolume]);
+  }, [onTranscript, onResponse, processAudioVolume]);
 
   const stopStreaming = useCallback(() => {
     isStoppingRef.current = true;

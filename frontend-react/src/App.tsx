@@ -40,7 +40,11 @@ function App() {
   const { isStreaming, volumeLevel: wsVolumeLevel, startStreaming, stopStreaming } = useWebSocketStreaming(
     (transcript: string) => {
       console.log('📨 Transcript from WebSocket:', transcript);
-      processMessage(transcript);
+      processMessage(transcript, true);
+    },
+    (response: string) => {
+      console.log('📨 Response from WebSocket:', response);
+      handleWebSocketResponse(response);
     }
   );
 
@@ -94,7 +98,39 @@ function App() {
     }
   };
 
-  const processMessage = async (transcript: string) => {
+  const handleWebSocketResponse = async (reply: string) => {
+    console.log('💭 Handling WebSocket response:', reply);
+    const newAiMsg: ChatMessage = {
+      role: 'ai',
+      text: reply,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+
+    setChatMessages((prev) => [...prev, newAiMsg]);
+    setStatus('Speaking...');
+
+    // Stop WebSocket streaming while bot speaks (prevents hearing itself)
+    console.log('🔇 Pausing stream during TTS...');
+    stopStreaming();
+
+    // Speak and wait for it to finish
+    await new Promise<void>((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(reply);
+      utterance.onend = () => {
+        console.log('✅ TTS finished');
+        resolve();
+      };
+      window.speechSynthesis.speak(utterance);
+    });
+
+    // Resume WebSocket streaming after bot finishes speaking
+    console.log('🔊 Resuming stream...');
+    await startStreaming();
+
+    setStatus('Listening...');
+  };
+
+  const processMessage = async (transcript: string, fromWebSocket: boolean = false) => {
     const newUserMsg: ChatMessage = {
       role: 'user',
       text: transcript,
@@ -102,6 +138,15 @@ function App() {
     };
 
     setChatMessages((prev) => [...prev, newUserMsg]);
+
+    // In WebSocket streaming mode, response comes from WebSocket, so just wait for it
+    if (fromWebSocket && CONFIG.LISTENING_MODE === 'websocket-streaming') {
+      console.log('⏳ Waiting for WebSocket response...');
+      setStatus('Listening...');
+      return;
+    }
+
+    // For wake-word mode, fetch the response via API
     setStatus('Getting response...');
 
     try {
@@ -129,12 +174,6 @@ function App() {
       setChatMessages((prev) => [...prev, newAiMsg]);
       setStatus('Speaking...');
 
-      // Stop WebSocket streaming while bot speaks (prevents hearing itself)
-      if (CONFIG.LISTENING_MODE === 'websocket-streaming') {
-        console.log('🔇 Pausing stream during TTS...');
-        stopStreaming();
-      }
-
       // Speak and wait for it to finish
       await new Promise<void>((resolve) => {
         const utterance = new SpeechSynthesisUtterance(reply);
@@ -144,12 +183,6 @@ function App() {
         };
         window.speechSynthesis.speak(utterance);
       });
-
-      // Resume WebSocket streaming after bot finishes speaking
-      if (CONFIG.LISTENING_MODE === 'websocket-streaming') {
-        console.log('🔊 Resuming stream...');
-        await startStreaming();
-      }
 
       setStatus('Listening...');
     } catch (err) {

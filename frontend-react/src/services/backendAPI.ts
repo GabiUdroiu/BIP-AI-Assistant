@@ -1,4 +1,6 @@
-export const API_URL = "http://localhost:8080/api";
+// Use dynamic backend host to support phone access
+const backendHost = import.meta.env.VITE_BACKEND_HOST || `${window.location.hostname}:8080`;
+export const API_URL = `http://${backendHost}/api`;
 
 export interface ApiResponse<T> {
   data: T | null;

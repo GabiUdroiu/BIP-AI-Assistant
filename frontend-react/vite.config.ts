@@ -4,4 +4,15 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      '10.31.1.2',
+      '.ngrok-free.dev',
+      '.ngrok.io',
+    ],
+  },
 })
