@@ -1,7 +1,3 @@
-.venv\Scripts\uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
-
-
-
 # Backend Core (Python / FastAPI)
 
 Voice + chat API: speech-to-text, RAG-grounded chat replies, persistent conversation memory.

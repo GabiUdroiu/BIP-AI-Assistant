@@ -87,4 +87,16 @@ Whisper   RAG   PostgreSQL
 
 ## 📸 Screenshots
 
-todo
+### Team
+
+![Team](assets/img/us.jpg)
+
+### Frontend
+ 
+![Frontend](assets\img\frontend-react.png)
+
+### Dashboard
+
+![Dashboard](assets\img\dashboard.png)
+ 
+ 
