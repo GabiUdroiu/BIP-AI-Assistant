@@ -93,10 +93,10 @@ Whisper   RAG   PostgreSQL
 
 ### Frontend
  
-![Frontend](assets\img\frontend-react.png)
+![Frontend](assets/img/frontend-react.png)
 
 ### Dashboard
 
-![Dashboard](assets\img\dashboard.png)
+![Dashboard](assets/img/dashboard.png)
  
  
